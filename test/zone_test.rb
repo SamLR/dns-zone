@@ -90,6 +90,25 @@ app1                    60 A     4.3.2.1
 
 EOL
 
+  # basic zone file example
+  ZONE_FILE_MULTIPLE_ORIGINS_MISSING_ATS_EXAMPLE =<<-EOL
+$ORIGIN lividpenguin.com.
+$TTL 3d
+@           IN  SOA  ns0.lividpenguin.com. luke.lividpenguin.com. (
+                           2013101406 ; zone serial number
+                           12h        ; refresh ttl
+                           15m        ; retry ttl
+                           3w         ; expiry ttl
+                           3h         ; minimum ttl
+                         )
+
+$ORIGIN sub.lividpenguin.com.
+@                    60 A     1.2.3.4
+                     60 TXT   "foo"
+app1                 60 A     4.3.2.1
+                     60 TXT   "bar"
+EOL
+
   def test_create_new_instance
     assert DNS::Zone.new
   end
@@ -198,6 +217,24 @@ EOL
     assert_equal '1.1.1.1', zone.records[10].address
     assert_equal 'app1.another', zone.records[11].label
     assert_equal '4.3.2.1', zone.records[11].address
+  end
+
+  def test_load_multiple_origins_with_missing_ats
+    zone = DNS::Zone.load(ZONE_FILE_MULTIPLE_ORIGINS_MISSING_ATS_EXAMPLE)
+    assert_equal 'lividpenguin.com.', zone.origin
+    assert_equal 5, zone.records.length, 'we should have multiple records (including SOA)'
+    assert_equal 'A', zone.records[1].type
+    assert_equal 'sub', zone.records[1].label
+    assert_equal '1.2.3.4', zone.records[1].address
+    assert_equal 'TXT', zone.records[2].type
+    assert_equal 'sub', zone.records[2].label
+    assert_equal 'foo', zone.records[2].text
+    assert_equal 'A', zone.records[3].type
+    assert_equal 'app1.sub', zone.records[3].label
+    assert_equal '4.3.2.1', zone.records[3].address
+    assert_equal 'TXT', zone.records[4].type
+    assert_equal 'app1.sub', zone.records[4].label
+    assert_equal 'bar', zone.records[4].text
   end
 
   def test_extract_entry_from_one_line
